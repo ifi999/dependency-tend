@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  swift:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test
+        run: swift test
+      - name: Release build
+        run: swift build -c release
+      - name: Build app bundle
+        run: ./scripts/make-app.sh
+      - name: Validate app bundle
+        run: ./scripts/validate-app-bundle.sh build/DependencyTend.app
+      - name: Package app artifact
+        run: ditto -c -k --sequesterRsrc --keepParent build/DependencyTend.app build/DependencyTend.app.zip
+      - name: Upload app artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DependencyTend.app
+          path: build/DependencyTend.app.zip
